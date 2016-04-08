@@ -1,0 +1,9 @@
+DECLARE INTEGER CreateProcess  IN Win32api INTEGER,STRING,INTEGER,INTEGER,INTEGER,INTEGER,INTEGER,INTEGER,STRING,STRING @
+declare integer GetLastError IN Win32api
+si =CHR(0x44)+REPLICATE(CHR(0),64)
+pi = REPLICATE(CHR(0),12)
+? CreateProcess(0,'c:\abc\a.exe',0,0,0,0,0,0,si,@pi)
+? getlasterror()
+
+
+

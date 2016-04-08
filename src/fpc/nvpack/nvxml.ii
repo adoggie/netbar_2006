@@ -1,0 +1,689 @@
+
+//#include "nvxml.h"
+
+NVXML_INLINE 
+NVXmlAttr::NVXmlAttr(){
+	_node = NVNULL;
+}
+
+NVXML_INLINE 
+NVXmlAttr::~NVXmlAttr(){
+	
+}
+
+NVXML_INLINE 
+NVXmlAttr::NVXmlAttr(NVString name,NVString value){
+	_name = name;
+	_value = value;
+	
+}
+NVXML_INLINE 
+NVString *NVXmlAttr::GetValue(){
+	return &_value;
+}
+NVXML_INLINE 
+NVString *NVXmlAttr::GetName(){
+	return &_name;
+}
+NVXML_INLINE 
+void NVXmlAttr::SetValue(NVString value){
+	_value = value;
+}
+NVXML_INLINE 
+void NVXmlAttr::SetName(NVString name){
+	_name = name;
+}
+ 
+NVXML_INLINE 
+int NVXmlAttr::AsInteger(){
+	return atol(_value.c_str());
+}
+
+
+
+NVXML_INLINE 
+NVXmlAttr*	NVXmlAttr::GetNext(){
+	XmlAttrs_List::iterator itr;
+	for(itr = _node->GetAttrs()->GetList()->begin();
+				itr!= _node->GetAttrs()->GetList()->end();
+				itr++){
+		if( *itr == this){
+			itr++;
+			if( itr!=_node->GetAttrs()->GetList()->end()){
+				return *itr;
+			}
+
+		}
+	}
+	return NVNULL;
+}
+
+NVXML_INLINE
+void		NVXmlAttr::SetNode(NVXmlTreeNode* n){
+	_node = n;
+}
+
+NVXML_INLINE
+NVXmlTreeNode*	NVXmlAttr::GetNode(){
+	return _node;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+NVXML_INLINE 
+NVXmlAttrs::~NVXmlAttrs(){
+	Empty();
+}
+
+NVXML_INLINE 
+NVXmlAttrs::NVXmlAttrs(){
+	
+}
+
+NVXML_INLINE 
+unsigned short  NVXmlAttrs::GetCount(){
+	return (unsigned short)_attr_list.size();
+}
+
+NVXML_INLINE 
+void NVXmlAttrs::DeleteAttr(NVString  name){
+	XmlAttrs_List::iterator itr,it_pre,it_next;
+	NVXmlAttr *attr;
+//	Lock();
+	for(itr = _attr_list.begin();itr!= _attr_list.end();itr++){
+		attr = *itr;
+		if( *attr->GetName() == name){
+			delete attr;
+			_attr_list.erase(itr);
+			break;
+		}
+	}
+//	Unlock();
+}
+ 
+
+NVXML_INLINE 
+void NVXmlAttrs::AddAttr(NVXmlTreeNode*	node,NVXmlAttr* attr){
+	_attr_list.push_back(attr);
+	attr->SetNode(node);
+}
+NVXML_INLINE 
+NVXmlAttr* NVXmlAttrs::AddAttr(NVXmlTreeNode* node){
+	NVXmlAttr * attr = new NVXmlAttr();
+	AddAttr(node,attr);
+	return attr;
+}
+
+NVXML_INLINE 
+NVXmlAttr * NVXmlAttrs::AddAttr(NVXmlTreeNode*node, NVString name,NVString value){
+	NVXmlAttr * attr;
+	attr = AddAttr(node);
+	attr->SetName(name);
+	attr->SetValue(value);
+	return attr;
+}
+
+NVXML_INLINE 
+NVXmlAttr * NVXmlAttrs::GetAttr(NVString name){
+	XmlAttrs_List::iterator itr;
+	NVXmlAttr *attr;
+
+	for(itr = _attr_list.begin();itr!= _attr_list.end();itr++){
+		attr = *itr;
+		if( *attr->GetName()==name){
+			return attr;			
+		}
+	}
+
+	return NVNULL;
+}
+
+NVXML_INLINE 
+void NVXmlAttrs::Empty(){
+	XmlAttrs_List::iterator itr;
+	NVXmlAttr *attr;
+//	Lock();
+	for(itr = _attr_list.begin();itr!= _attr_list.end();itr++){
+		attr = *itr;
+		delete attr;
+	}
+	_attr_list.erase(_attr_list.begin(),_attr_list.end());
+//	Unlock();		
+}
+
+NVXML_INLINE 
+XmlAttrs_List * NVXmlAttrs::GetList(){
+	return &_attr_list;
+}
+
+ 
+NVXML_INLINE 
+NVXmlAttr*	NVXmlAttrs::GetFirstAttr(){
+	if( _attr_list.size() == 0){
+		return NVNULL;
+	}
+	return _attr_list.front(); 
+}
+
+
+//////////////////////////////////////////////////////////////////////
+NVXML_INLINE 
+NVXmlTreeNodes::NVXmlTreeNodes(){
+	
+}
+NVXML_INLINE 
+NVXmlTreeNodes::~NVXmlTreeNodes(){
+	Empty();
+}
+
+NVXML_INLINE 
+void NVXmlTreeNodes::Empty(){
+	XmlTreeNode_List::iterator itr;
+	NVXmlTreeNode * node;
+//	Lock();
+	for(itr = _node_list.begin();itr!=_node_list.end();itr++){
+		node = *itr;		
+		delete node;
+	}
+	_node_list.erase(_node_list.begin(),_node_list.end());
+//	Unlock();	
+}
+
+NVXML_INLINE 
+void NVXmlTreeNodes::AddChildNode(NVXmlTreeNode* node){	
+//	Lock();
+	_node_list.push_back(node);
+//	Unlock();
+}
+
+NVXML_INLINE 
+NVXmlTreeNode* NVXmlTreeNodes::AddChildNode(){
+	NVXmlTreeNode * node = new NVXmlTreeNode;
+	AddChildNode(node);
+	return node;
+	
+}
+NVXML_INLINE 
+void NVXmlTreeNodes::DeleteChildNode(NVString &name){
+	XmlTreeNode_List::iterator itr,it_pre,it_next;
+	NVXmlTreeNode * node;
+//	Lock();
+	for(itr = _node_list.begin();itr!=_node_list.end();itr++){
+		node = *itr;
+		if( *node->GetName() == name){
+			delete node;
+			_node_list.erase(itr);
+		//	Unlock();
+			return;
+		}
+	}
+//	Unlock();
+
+}
+
+NVXML_INLINE 
+unsigned int NVXmlTreeNodes::GetCount(){
+	return _node_list.size();
+}
+
+NVXML_INLINE 
+NVXmlTreeNode * NVXmlTreeNodes::GetFirstNode(){
+	NVXmlTreeNode *node = NVNULL;
+	if( GetCount()==0){
+		return NVNULL;
+	}
+//	Lock();
+	node = _node_list.front();
+//	Unlock();
+	return node;
+	
+}
+
+NVXML_INLINE 
+XmlTreeNode_List* NVXmlTreeNodes::GetList(){
+	return & this->_node_list;
+}
+
+NVXML_INLINE 
+NVXmlTreeNode * NVXmlTreeNodes::GetNode(NVString name){
+	XmlTreeNode_List::iterator itr;
+	NVXmlTreeNode * node;	
+	for(itr = _node_list.begin();itr!=_node_list.end();itr++){
+		node = *itr;
+		if( *node->GetName() == name){
+			return node;
+		}
+	}
+	return NVNULL;
+}
+
+NVXML_INLINE
+//////////////////////////////////////////////////////////////////////////
+NVXmlTreeNodes* NVXmlTreeNode::GetChildNodes(){
+	return &_nodes;
+}
+
+NVXML_INLINE
+NVXmlAttrs*		NVXmlTreeNode::GetAttrs(){
+	return &_attrs;
+}
+
+
+NVXML_INLINE 
+NVXmlTreeNode::NVXmlTreeNode(){
+	_parent = NVNULL;
+	_chars = "";	
+}
+
+NVXML_INLINE
+NVXmlTreeNode::~NVXmlTreeNode(){	
+	_attrs.Empty();
+	_nodes.Empty();	
+}
+
+
+NVXML_INLINE 
+bool NVXmlTreeNode::ToXMLBuffer(char *buff ,unsigned int len){	
+	buff[0]='\0';
+	return GatherBuff(buff,len,this);		
+}
+
+
+NVXML_INLINE 
+void NVXmlTreeNode::CalcBufferSize(unsigned int	*size){
+	//"<>"
+	XmlAttrs_List::iterator itr;
+	*size = *size+ GetName()->length();
+	if(GetChildNodes()->GetCount()){
+		*size = *size+  2 ; // <>
+		*size =*size+ GetName()->length()+ 3; // '</>'
+	}else{
+		*size = *size + 3; // </>
+	}
+	for( itr = GetAttrs()->GetList()->begin();itr!=GetAttrs()->GetList()->end();itr++){
+		*size = *size + (*itr)->GetName()->length()+(*itr)->GetValue()->length() + 4; // ' =""'
+	}
+
+	XmlTreeNode_List::iterator itr_node;
+	for( itr_node = GetChildNodes()->GetList()->begin();
+			itr_node!=GetChildNodes()->GetList()->end(); itr_node++){
+		(*itr_node)->CalcBufferSize(size);
+	}
+
+}	
+
+
+NVXML_INLINE 
+bool NVXmlTreeNode::GatherBuff(char *buff ,unsigned int len,NVXmlTreeNode* node){
+	NVXmlTreeNodes * nodes ;
+	strcat(buff,"<");
+	strcat(buff,node->GetName()->c_str());
+	nodes = node->GetChildNodes();
+	XmlAttrs_List::iterator itr_attr;
+	for(itr_attr=node->GetAttrs()->GetList()->begin();
+		itr_attr!=node->GetAttrs()->GetList()->end();itr_attr++){
+			NVXmlAttr *a;
+			a = *itr_attr;
+			strcat(buff," ");
+			strcat(buff,a->GetName()->c_str());
+			strcat(buff,"=\"");
+			strcat(buff,a->GetValue()->c_str());
+			strcat(buff,"\"");
+	}
+	if( nodes->GetCount()){
+		strcat(buff,">");
+	}
+		
+	XmlTreeNode_List::iterator itr;
+	for(itr = nodes->GetList()->begin();itr!=nodes->GetList()->end();itr++){
+		GatherBuff(buff,len,*itr);
+	}
+	if( nodes->GetCount()){
+		strcat(buff,"</");
+		strcat(buff,node->GetName()->c_str());
+		strcat(buff,">");
+	}else{
+		strcat(buff,"/>");
+	}
+	return true;
+}
+
+NVXML_INLINE 
+NVXmlTreeNode*  NVXmlTreeNode::GetNext(){
+	XmlTreeNode_List::iterator itr;
+	XmlTreeNode_List *node_list;
+	if( _parent == NVNULL){
+		return NVNULL;
+	}	
+	node_list = _parent->GetChildNodes()->GetList();
+	for(itr = node_list->begin();itr!=node_list->end();itr++){
+		if( *itr == this){
+			itr++;
+			if( itr == node_list->end()){	/**last node*/
+				return NVNULL;
+			}
+			return *itr;
+		}
+	}
+	return NVNULL;
+}
+
+NVXML_INLINE 
+void			NVXmlTreeNode::AddChildNode(NVXmlTreeNode* n){
+	_nodes.AddChildNode(n);
+	n->SetParent(this);
+}
+
+NVXML_INLINE 
+NVXmlTreeNode*	NVXmlTreeNode::AddChildNode(){
+	NVXmlTreeNode *n;
+	n = _nodes.AddChildNode();
+	n->SetParent(this);
+	return n;
+}
+
+NVXML_INLINE 
+void			NVXmlTreeNode::DeleteNode(NVString &name){
+	_nodes.DeleteChildNode(name);
+}
+
+NVXML_INLINE 
+void			NVXmlTreeNode::EmptyNodes(){
+	_nodes.Empty();
+}
+
+NVXML_INLINE 
+unsigned int	NVXmlTreeNode::GetChildNodeCount(){
+	return _nodes.GetCount();
+}
+
+NVXML_INLINE 
+NVXmlTreeNode * NVXmlTreeNode::GetFirstNode(){
+	return _nodes.GetFirstNode();
+}
+
+NVXML_INLINE 
+NVXmlTreeNode * NVXmlTreeNode::GetChildNode(NVString name){
+	return _nodes.GetNode(name);
+}
+
+NVXML_INLINE 
+unsigned short  NVXmlTreeNode::GetAttrCount(){
+	return _attrs.GetCount();
+}
+
+NVXML_INLINE 
+void			NVXmlTreeNode::DeleteAttr(NVString  name){
+	_attrs.DeleteAttr(name);
+}
+
+
+NVXML_INLINE 
+void			NVXmlTreeNode::AddAttr(NVXmlAttr* a){
+	_attrs.AddAttr(this,a);
+}
+
+NVXML_INLINE 
+void			NVXmlTreeNode::AddAttr(NVString name,NVString value){
+	_attrs.AddAttr(this,name,value);
+}
+
+NVXML_INLINE 
+NVXmlAttr *		NVXmlTreeNode::AddAttr(){
+	return _attrs.AddAttr(this);
+}
+
+
+ 
+
+NVXML_INLINE 
+NVXmlAttr *		NVXmlTreeNode::GetAttr(NVString name){
+	return _attrs.GetAttr(name);
+}
+
+NVXML_INLINE 
+void			NVXmlTreeNode::EmptyAttrs(){
+	_attrs.Empty();
+}
+
+NVXML_INLINE 
+NVXmlAttr*		NVXmlTreeNode::GetFirstAttr(){
+	return _attrs.GetFirstAttr();
+}
+
+
+NVXML_INLINE 
+NVXmlTreeNode * NVXmlTreeNode::GetParent(){
+	return _parent;
+}
+
+NVXML_INLINE
+void NVXmlTreeNode::SetParent(NVXmlTreeNode * node){
+	_parent = node;
+}
+
+NVXML_INLINE 
+NVString * NVXmlTreeNode::GetName(){
+	return &_name; 
+}
+NVXML_INLINE 
+void NVXmlTreeNode::SetName(NVString n){
+	_name = n;
+}
+
+NVXML_INLINE 
+NVXmlTreeNode * NVXmlTreeNode::SearchNode(NVString name,int *deep){
+	NVXmlTreeNode * n;
+	if( *deep <=0){
+		return NVNULL;
+	}	
+	(*deep)--;
+	if( *GetName() ==  name){
+		return this;
+	}
+	XmlTreeNode_List::iterator itr;
+	for( itr = _nodes.GetList()->begin();itr!=_nodes.GetList()->end();itr++){		
+		if( (*itr)->GetChildNodeCount()){
+			int kdeep;
+			kdeep = *deep;
+			n = (*itr)->SearchNode(name,&kdeep);
+			if(n){
+				return n;
+			}
+		}
+	}
+	return NVNULL;	
+}
+
+NVXML_INLINE 
+NVString*	NVXmlTreeNode::GetCharData(){
+	return &_chars;
+}
+
+NVXML_INLINE 
+void	NVXmlTreeNode::SetCharData(NVString chars){
+	_chars = chars;
+}
+
+///////////////////////////////////////////////////////////////////////
+
+NVXML_INLINE 
+bool NVXmlTree::ToXMLBuffer(char *buff,unsigned int len){
+	if( !_root)	return false;
+	return _root->ToXMLBuffer(buff,len);	
+}
+
+NVXML_INLINE 
+void NVXmlTree::StartElement(void *userData, const char *name, const char **atts){
+	NVXmlTree * tree;
+	tree = (NVXmlTree*)userData;
+	NVXmlTreeNode *node;
+	
+	node = new NVXmlTreeNode;
+	if(*tree->GetRoot()==NVNULL){
+		*tree->GetRoot() = node;
+	}
+	tree->GetStackList()->push_back(node);
+	int n=0;
+//	printf("\n");
+	node->SetName(name);
+	while( atts[n] !=0){
+		NVString value,key;
+		key = atts[n];
+		n++;
+		value = atts[n];
+		node->GetAttrs()->AddAttr(node,key,value);		
+		n++;
+	//	printf("\t%s:%s",key.c_str(),value.c_str());
+	}
+
+}
+
+NVXML_INLINE 
+void NVXmlTree::EndElement(void *userData, const char *name){
+	NVXmlTree * tree;	
+	//NVXmlTreeNode *node;
+	XmlTreeNode_List::iterator itr,it_pre;
+	
+	tree = (NVXmlTree*)userData;
+	
+	if( tree->GetStackList()->size()<2)	return;
+	itr = tree->GetStackList()->end();
+	itr--;	
+	it_pre = --itr;
+	itr++;
+	(*itr)->SetParent(*it_pre);
+	(*it_pre)->GetChildNodes()->AddChildNode(*itr);
+	tree->GetStackList()->erase(itr);
+}
+
+/*	add on 2005.07.12 zhangbin
+	charater data string isn't  null terminated!
+	2006.01.10 expat 不能正确在character中存在\n字符，未曾深入研究expat，只是规定
+	xml编码方不能将\n编入，待以后推敲
+*/
+NVXML_INLINE 
+void NVXmlTree::CharacterDataHandler(void *userData,
+                                    const XML_Char *s,
+                                    int len){
+	NVXmlTree * tree;	
+	NVXmlTreeNode *node;
+	XmlTreeNode_List::iterator itr,it_pre;
+	
+	tree = (NVXmlTree*)userData;
+	itr = tree->GetStackList()->end();
+	itr--;
+	node = *itr; 
+	char * buff = new char[len+1];
+	if( buff == 0){
+		return ;
+	}
+	memset(buff,0,len+1);
+	memcpy( buff,s,len);
+	node->SetCharData(buff);
+	delete []buff;
+}
+
+
+
+NVXML_INLINE 
+bool NVXmlTree::XMLParse(const char * buff,unsigned int len){
+	XML_Parser parser = NVXmlTree::_xmlf.XML_ParserCreate(NULL);
+	NVXmlTree::_xmlf.XML_SetEncoding(parser,_charset);
+	NVXmlTree::_xmlf.XML_SetUserData(parser, this);
+	NVXmlTree::_xmlf.XML_SetElementHandler(parser, NVXmlTree::StartElement, NVXmlTree::EndElement);
+	NVXmlTree::_xmlf.XML_SetCharacterDataHandler(parser,NVXmlTree::CharacterDataHandler);
+
+	if (NVXmlTree::_xmlf.XML_Parse(parser, buff, len, 1) == XML_STATUS_ERROR){
+		NVXmlTree::_xmlf.XML_ParserFree(parser);
+		return false;
+	}
+	NVXmlTree::_xmlf.XML_ParserFree(parser);
+	return true;
+}
+
+NVXML_INLINE 
+NVXmlTreeNode ** NVXmlTree::GetRoot(){
+	return &_root;
+}
+
+NVXML_INLINE 
+XmlTreeNode_List * NVXmlTree::GetStackList(){
+	return &_nodes_stack;
+}
+
+NVXML_INLINE 
+NVXmlTreeNode *NVXmlTree::GetRootNode(){
+	return _root;
+}
+
+NVXML_INLINE 
+void NVXmlTree::SetXML_Func(XML_Func xmlf){
+	_xmlf = xmlf;
+}
+
+NVXML_INLINE
+NVXmlTree::NVXmlTree(const char * charset){
+	_root= NVNULL;
+	_charset = (char*)charset;
+}
+
+NVXML_INLINE
+NVXmlTree::~NVXmlTree(){
+	if(_root){
+		delete _root;
+		_root = NVNULL;
+	}
+}
+
+
+NVXML_INLINE 
+void NVXmlTree::SetRootNode(NVXmlTreeNode* n){
+	_root = n;
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+
+NVXML_INLINE
+bool	NVXmlTree::Init_XmlLib(const char * libexpat){	
+#ifdef WIN32
+	if ( !_xml_dll.LoadDll(libexpat)){
+		return false;	
+	}	
+	_xmlf.XML_Parse= (NV_XML_Parse)_xml_dll.LoadSymbol("XML_Parse");	
+	_xmlf.XML_ParserCreate = (NV_XML_ParserCreate)_xml_dll.LoadSymbol("XML_ParserCreate");	
+	_xmlf.XML_ParserFree=(NV_XML_ParserFree)_xml_dll.LoadSymbol("XML_ParserFree");
+	_xmlf.XML_SetElementHandler=(NV_XML_SetElementHandler)_xml_dll.LoadSymbol("XML_SetElementHandler");
+	_xmlf.XML_SetUserData = (NV_XML_SetUserData)_xml_dll.LoadSymbol("XML_SetUserData");		
+	_xmlf.XML_SetEncoding = (NV_XML_SetEncoding) _xml_dll.LoadSymbol("XML_SetEncoding");	
+	_xmlf.XML_SetCharacterDataHandler = (NV_XML_SetCharacterDataHandler)
+							_xml_dll.LoadSymbol("XML_SetCharacterDataHandler");	
+#endif
+#ifdef _UNIX
+//-- on unix,using expat api directly
+	_xmlf.XML_Parse= (NV_XML_Parse)XML_Parse;	
+	_xmlf.XML_ParserCreate = (NV_XML_ParserCreate)XML_ParserCreate;	
+	_xmlf.XML_ParserFree=(NV_XML_ParserFree)XML_ParserFree;
+	_xmlf.XML_SetElementHandler=(NV_XML_SetElementHandler)XML_SetElementHandler;
+	_xmlf.XML_SetUserData = (NV_XML_SetUserData)XML_SetUserData;		
+	_xmlf.XML_SetEncoding = (NV_XML_SetEncoding)XML_SetEncoding;	
+	_xmlf.XML_SetCharacterDataHandler = (NV_XML_SetCharacterDataHandler)XML_SetCharacterDataHandler;	
+
+#endif
+	return true;
+}	
+
+NVXML_INLINE
+bool	NVXmlTree::CheckXml(const char * buff,unsigned int len,const char * charset){
+
+	XML_Parser parser = NVXmlTree::_xmlf.XML_ParserCreate(NULL);
+	NVXmlTree::_xmlf.XML_SetEncoding(parser,charset);
+	if (NVXmlTree::_xmlf.XML_Parse(parser, buff, len, 1) == XML_STATUS_ERROR){
+		NVXmlTree::_xmlf.XML_ParserFree(parser);
+		return false;
+	}
+	NVXmlTree::_xmlf.XML_ParserFree(parser);	
+	return true;
+}
+

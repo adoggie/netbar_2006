@@ -1,0 +1,9 @@
+.idea
+*.pyc
+*.log
+*.tds
+*.obj
+Desktop__.ini
+Thumbs.db
+*.pdb
+*.ncb

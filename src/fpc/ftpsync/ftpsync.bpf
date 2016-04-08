@@ -1,0 +1,5 @@
+USEFORM("ftpsync.cpp", dmftp); /* TDataModule: File Type */
+//---------------------------------------------------------------------------
+This file is used by the project manager only and should be treated like the project file
+
+DllMain

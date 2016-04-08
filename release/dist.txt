@@ -1,0 +1,25 @@
+安装配置：
+========================
+1. 复制mysql5/bin/libmysql.dll到windows下
+2. 编辑php5.php
+   允许 extention_mysql,设置上传目录
+   设置临时目录
+   设置zend framework库路径 到include_path
+    设置mpms/website/lib到php
+3. 创建php上传目录
+4. 创建cms目录
+5. 安装ser-u,创建用户并指定用户目录为cms目录
+6. 安装python环境，安装mysql for python2.4
+7. 安装ice for python 
+8. 环境变量PATH 加入 ice/bin
+9. 增加环境变量PYTHONPATH=$ice/bin;$ice/python
+10. 修改httpd.conf的php参数,放开.htaccess功能，
+    设置系统主页目录
+    
+
+
+环境测试
+=================================
+1.cms:
+ftp下载测试
+http媒体文件访问测试

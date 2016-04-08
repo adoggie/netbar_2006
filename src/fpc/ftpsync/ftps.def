@@ -1,0 +1,7 @@
+
+EXPORTS
+	ftp_login@1
+	ftp_logoff@2
+	ftp_cwd@3
+	ftp_getfile@4
+	

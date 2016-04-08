@@ -1,0 +1,9 @@
+
+
+
+
+
+EXPORTS
+	SetCaptureKey @1
+	IeToolbar_Clicked @2
+	UnSet@5

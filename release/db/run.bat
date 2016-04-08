@@ -1,0 +1,1 @@
+bin\mysqld --console

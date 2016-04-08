@@ -1,0 +1,303 @@
+
+//#include "nvconnection.h"
+
+NVINLINE
+NVSocketConnection::NVSocketConnection(){
+	_socket = NVNULL;
+}
+
+NVINLINE
+NVSocketConnection::~NVSocketConnection(){
+	if(_socket)	{
+		delete _socket;
+	}
+}
+
+NVINLINE
+bool NVSocketConnection::SetConnectTimeOut(unsigned short timeout){
+	_timeout = timeout;
+	return true;
+}
+
+NVINLINE
+void NVSocketConnection::Close(){
+	if(_socket == NVNULL){
+		return ;
+	}
+	_socket->Destroy();
+	Terminate();
+	Wait();
+	_socket = NULL;
+}
+
+NVINLINE
+bool NVSocketConnection::OnConnected(){
+	return true;
+}
+
+NVINLINE
+bool NVSocketConnection::OnConnectFailed(){
+	return true;
+}
+
+NVINLINE
+bool NVSocketConnection::OnDisconnected(){
+	Terminate();
+	_socket->Destroy();	
+	//printf("\n Ondisconnect");
+	return true;
+}
+
+NVINLINE
+NVSocket * NVSocketConnection::GetSocket(){
+	return _socket;
+}
+
+NVINLINE
+void NVSocketConnection::SetSocket(NVSocket* socket){
+	_socket = socket;
+}
+
+NVINLINE
+void NVSocketConnection::SetConnectType(NVConnectType type){
+	_connect_type = type;
+}
+
+
+NVINLINE
+void NVSocketConnection::OnDataRecved( NVSocketConnection *connection,
+			NVSocket *socket,NVByte * buff,NVUInt16 len){
+	
+}
+
+NVINLINE
+NVInt32 NVSocketConnection::Write(NVByte * buff,NVUInt16 len){
+	return _socket->Write(buff,len);	
+}
+
+NVINLINE
+NVConnectType NVSocketConnection::GetConnectType(){
+	return _connect_type;
+}
+
+
+
+//------------------------------------------------------------------
+
+NVINLINE
+NVTcpConnection::NVTcpConnection(NVTcpConnection *parent){
+	_parent = parent;	
+}
+
+NVINLINE
+NVTcpConnection::NVTcpConnection(){
+	_parent = NULL;
+}
+
+NVINLINE
+NVTcpConnection::~NVTcpConnection(){
+	
+}
+
+#define IF_SOCKET_FAIL(r,s)	if(r){\
+								delete s;\
+								s=NVNULL;\
+								return false;\
+							}
+
+NVINLINE
+bool NVTcpConnection::Connect(NVNetAddr naddr,NVConnectMode mode,NVConnectType type,NVSocketError *error){
+	//--
+	int ret;
+	NVTcpSocket *tcpsocket ;
+	tcpsocket = new NVTcpSocket;
+	if(!tcpsocket->Create()){
+		delete tcpsocket;
+		return false;
+	}
+	tcpsocket->SetNetAddr(&naddr);
+	SetConnectType(type);	
+	_socket = tcpsocket;
+
+	if(type ==BIND){
+		NVSocket::SetAddressReuse(_socket->GetSocketHandle());
+		ret = bind(	_socket->GetSocketHandle(),(sockaddr*)naddr.GetSockAddr(),sizeof(sockaddr_in));		
+		IF_SOCKET_FAIL(ret,_socket);
+		ret = listen(_socket->GetSocketHandle(),5);
+		IF_SOCKET_FAIL(ret,_socket);
+
+	}else if( type == CONNECT){
+		ret = connect(_socket->GetSocketHandle(),
+					(sockaddr*)naddr.GetSockAddr(),sizeof(sockaddr_in));
+		IF_SOCKET_FAIL(ret,_socket);		
+	}else{
+		IF_SOCKET_FAIL(1,_socket);		
+		return false;
+	}
+	NVThread::Create();	//创建 accept线程			
+	return true;
+	
+
+}
+
+ 
+
+
+NVINLINE
+bool NVTcpConnection::OnAcceptConnectReqest(NVTcpConnection * connection){	
+	return true;
+}
+
+
+NVINLINE NVTcpConnection* 
+NVTcpConnection::CreateInBoundConnection(){
+	return new NVTcpConnection(this);
+}
+
+NVINLINE
+void NVTcpConnection::Run(void *param){
+	int sock;
+	SOCKLEN socklen;
+	NVNetAddr addr;
+	char buff[1024*16];
+
+	int ret;
+	NVTcpConnection *connection;
+	NVTcpSocket *tcpsocket;
+	
+	OnConnected();	
+	if(_connect_type==BIND){	
+		
+		while(THREAD_CONTINUE(*this)){
+			socklen = sizeof(sockaddr);
+			sock = accept(_socket->GetSocketHandle(),(sockaddr*)addr.GetSockAddr(),&socklen);
+			if(sock < 0){								
+				break;;
+			}
+			tcpsocket = new NVTcpSocket;
+			tcpsocket->SetSocketHandle(sock);
+			tcpsocket->SetNetAddr(&addr);
+			
+			connection = CreateInBoundConnection();	// subclass should override this function
+			connection->SetSocket(tcpsocket);
+			
+			if(OnAcceptConnectReqest(connection)){
+				NVMutexLock lock(_lock);
+				_tcpcnn_list.push_back(connection);				
+				connection->SetConnectType(CONNECT);
+				connection->NVThread::Create();
+			}else{				
+				tcpsocket->Destroy();
+				delete connection;
+			}
+		}	
+	}
+	if(_connect_type == CONNECT){	//接收tcp数据
+		
+		while(THREAD_CONTINUE(*this)){	
+			ret = _socket->Read(buff,sizeof(buff),0);
+			if( ret <=0){								
+				break;
+			}
+			OnDataRecved(this,_socket,buff,ret);
+		}		
+	}
+	OnDisconnected();
+}
+
+//--add on 06.01.09	scott
+NVINLINE bool 
+NVTcpConnection::OnConnected(){
+	return true;
+}
+
+NVINLINE
+bool NVTcpConnection::OnDisconnected(){
+	TcpConnection_List::iterator itr;
+	NVSocketConnection::OnDisconnected();
+	{//关闭子连接
+		NVMutexLock lock(_lock);		
+		for(itr =_tcpcnn_list.begin();itr!= _tcpcnn_list.end();itr++){
+			(*itr)->Close();		
+		}
+	}
+	return true;
+}
+
+//////////////////////////////////////////////////////////////////////////
+NVINLINE
+NVUdpConnection::NVUdpConnection(){
+
+}
+
+NVINLINE
+bool NVUdpConnection::Connect(NVNetAddr naddr,NVConnectType type,bool run_thread,NVSocketError *error){
+
+	NVUdpSocket *udpsocket ;
+	int ret;
+	udpsocket = new NVUdpSocket;
+	if(!udpsocket->Create()){
+		delete udpsocket;
+		return false;
+	}	
+	udpsocket->SetNetAddr(&naddr);		
+	_socket = udpsocket;		
+	SetConnectType(type);	
+
+	if( type == BIND){
+		NVSocket::SetAddressReuse(udpsocket->GetSocketHandle());
+		ret = bind(udpsocket->GetSocketHandle(),(sockaddr*) naddr.GetSockAddr(),sizeof(sockaddr));
+		if( ret){
+			*error = ESocket_Bind_Another;
+			delete udpsocket;
+			return false;
+		}
+		if(run_thread){		
+			NVThread::Create();
+		}
+		
+		
+	}else if( type == CONNECT){
+		connect(udpsocket->GetSocketHandle(),(sockaddr*) naddr.GetSockAddr(),sizeof(sockaddr));
+	}
+	return true;
+}
+
+ 
+NVINLINE
+void NVUdpConnection::Run(void *param){	
+	NVNetAddr naddr;
+	NVUdpSocket  udpsocket;
+
+	char buff[1024*64];
+	int ret;
+
+	while(THREAD_CONTINUE(*this)){	
+		ret = _socket->Read(buff,sizeof(buff),&naddr);
+		if( ret <=0){			
+			break;
+		}
+		udpsocket.SetNetAddr(&naddr);
+		this->OnDataRecved(this,&udpsocket,buff,ret);
+	}
+	OnDisconnected();
+	ret = -1;
+}
+
+NVINLINE
+NVInt32 NVUdpConnection::Write(NVByte * buff,NVUInt16 len){
+	int ret;
+	if(_connect_type==BIND){//不能在绑定的socket上发送数据
+		ret = -1;
+	}else{
+		NVSocketConnection::Write(buff,len);
+	}
+	return -1;
+}
+
+
+
+
+
+
+

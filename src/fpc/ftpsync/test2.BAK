@@ -1,0 +1,4 @@
+DECLARE INTEGER WinExec IN Win32api STRING,INTEGER
+
+do WinExec('explorer',0)
+
